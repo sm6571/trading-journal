@@ -198,6 +198,64 @@ The DB file lives at `/home/trading_journal.db` on the App Service filesystem (p
 
 ---
 
+## Frontend Architecture
+
+The UI is a **single-page app** built with vanilla JS — no framework, no build step.
+
+### CDN Dependencies
+| Library         | Version | Purpose                              |
+|-----------------|---------|--------------------------------------|
+| Bootstrap       | 5.3.3   | Layout, modals, dark theme (`data-bs-theme="dark"`) |
+| FullCalendar    | 6.1.15  | Interactive month calendar           |
+| Chart.js        | 4.4.1   | All charts                           |
+
+### Design
+- **Dark theme** — deep navy palette (`--bg-primary: #0f1729`, `--accent: #e94560`, `--green: #00c853`)
+- **Responsive** — media queries at 768px and 480px, cards reflow on mobile
+- **Segoe UI / system-ui** font stack
+
+### Dashboard Layout (top to bottom)
+1. **Navbar** — brand, + Add Entry, Import CSV, Clear Data, Logout
+2. **Year filter bar** — "All Years" + per-year buttons (dynamically built from data)
+3. **Stats cards row** (6 cards) — Total P/L, Stocks P/L, Options P/L, Trade Win Rate (W/L sub-text), This Month, This Week
+4. **Calendar + Cumulative chart row**
+   - Left: FullCalendar month grid — each day shows color-coded P/L amount (green/red). Click any day → opens entry modal.
+   - Right: Cumulative P/L line chart (total, stocks-only, options-only lines). Below chart: Best Day, Worst Day, Avg/Day, Day Win % mini-stats.
+5. **Charts row 2** — Monthly P/L bar chart | Daily P/L bar chart
+6. **Charts row 3** — Stocks vs Options doughnut | P/L by Ticker horizontal bar (top 5 winners + top 5 losers, expandable to show all) | Rolling 10-day Win Rate line chart
+7. **Trades table** — sortable by date/symbol/type/P/L, filterable by date, paginated (loads 200 initially, "Load All" button), edit/delete per row
+
+### Charts (6 total, all Chart.js)
+| Chart              | Type       | Data Source    | Key Behavior                              |
+|--------------------|------------|----------------|-------------------------------------------|
+| Cumulative P/L     | Line       | `daily_pl`     | 3 lines (total/stocks/options), line color changes based on final value |
+| Monthly P/L        | Bar        | `daily_pl`     | Green/red bars by month                   |
+| Daily P/L          | Bar        | `daily_pl`     | Green/red bars per day                    |
+| Stocks vs Options  | Doughnut   | Stats API      | Uses absolute values for proportional comparison |
+| P/L by Ticker      | Horiz. Bar | `trades`       | Top 5 + bottom 5 by default, expandable to all |
+| Rolling Win Rate   | Line       | `daily_pl`     | 10-day rolling window with 50% reference line |
+
+### Modals (4)
+1. **Entry Modal** — date, stock P/L, options P/L, notes, live total preview. Edit mode shows Delete button.
+2. **Trade Modal** — date, symbol (auto-uppercase), type (stock/option), P/L, notes. Edit mode shows Delete.
+3. **Import Modal** — file picker, preview button (shows parsed data table + trade table before committing), import button.
+4. **Clear Data Modal** — requires typing "DELETE" to confirm. Deletes all entries and trades for current user.
+
+### Client-Side State & Data Flow
+- `allEntries[]` and `allTrades[]` — loaded on init via `Promise.all([entries, stats, trades])`
+- Year filter applies client-side: `filterByYear()` slices arrays, `computeLocalStats()` recalculates stats locally for filtered views (avoids extra API calls)
+- Trades initially load 200 most recent; "Load All" fetches up to 10,000
+- All mutations (save/delete entry/trade, import, clear) call `loadData()` to refresh everything
+- Trade table sort state tracked in `tradeSort = { col, dir }`
+
+### Login Page (`login.html`)
+- Self-contained (inline CSS + JS, no external app.js dependency)
+- Auto-detects first-run state via `/auth/status` → `needsSetup` flag → switches to register mode
+- Toggle between Sign In / Create Account
+- On success, redirects to `/`
+
+---
+
 ## Known Limitations / Improvement Ideas
 
 - [ ] **Session store is in-memory** — sessions lost on app restart. Consider `connect-redis` or `connect-sqlite3`.
