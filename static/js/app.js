@@ -6,6 +6,52 @@ let allTrades = [];
 let tradeSort = { col: 'date', dir: 'desc' };
 let activeYear = 'all';
 
+/* ── Theme ── */
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.documentElement.setAttribute('data-bs-theme', next);
+  localStorage.setItem('tj-theme', next);
+  updateChartTheme();
+}
+
+function updateChartTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const tickColor = isDark ? '#7986cb' : '#6b7280';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+  const gridLight = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+  const tooltipBg = isDark ? '#162036' : '#ffffff';
+  const tooltipBorder = isDark ? '#1e3054' : '#dde1e8';
+  const tooltipColor = isDark ? '#e8eaf6' : '#1a1a2e';
+
+  [chart, monthlyChart, dailyChart, tickerChart, winRateChart, dowChart, distChart].forEach(c => {
+    if (!c) return;
+    Object.values(c.options.scales || {}).forEach(scale => {
+      if (scale.ticks) scale.ticks.color = tickColor;
+      if (scale.grid) scale.grid.color = gridColor;
+    });
+    if (c.options.plugins?.tooltip) {
+      c.options.plugins.tooltip.backgroundColor = tooltipBg;
+      c.options.plugins.tooltip.borderColor = tooltipBorder;
+      c.options.plugins.tooltip.titleColor = tooltipColor;
+      c.options.plugins.tooltip.bodyColor = tooltipColor;
+    }
+    if (c.options.plugins?.legend?.labels) c.options.plugins.legend.labels.color = tickColor;
+    c.update('none');
+  });
+  if (stockOptChart) {
+    stockOptChart.options.plugins.legend.labels.color = tickColor;
+    if (stockOptChart.options.plugins?.tooltip) {
+      stockOptChart.options.plugins.tooltip.backgroundColor = tooltipBg;
+      stockOptChart.options.plugins.tooltip.borderColor = tooltipBorder;
+      stockOptChart.options.plugins.tooltip.titleColor = tooltipColor;
+      stockOptChart.options.plugins.tooltip.bodyColor = tooltipColor;
+    }
+    stockOptChart.update('none');
+  }
+}
+
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', () => {
   initCalendar();

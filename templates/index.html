@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
+  <script>
+    (function() {
+      var t = localStorage.getItem('tj-theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+      document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trading Journal</title>
@@ -20,6 +27,7 @@
         <button class="btn btn-success btn-sm" onclick="openNewEntry()">+ Add Entry</button>
         <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">📁 Import CSV</button>
         <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#clearDataModal" title="Clear All Data">🗑️</button>
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌓</button>
         <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#changePasswordModal" title="Change Password">🔑</button>
         <button class="btn btn-outline-secondary btn-sm" onclick="logout()" title="Logout">🚪</button>
       </div>
