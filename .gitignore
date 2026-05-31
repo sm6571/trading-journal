@@ -1,0 +1,7 @@
+node_modules/
+trading_journal.db
+trading_journal.db-shm
+trading_journal.db-wal
+*.db
+*.db-shm
+*.db-wal

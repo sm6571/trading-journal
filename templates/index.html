@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading Journal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="container-fluid">
+      <span class="navbar-brand">
+        <span class="brand-icon">📊</span> Trading Journal
+      </span>
+      <div class="d-flex gap-2 align-items-center">
+        <span class="text-muted small me-2" id="navUser"></span>
+        <button class="btn btn-success btn-sm" onclick="openNewEntry()">+ Add Entry</button>
+        <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">📁 Import CSV</button>
+        <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#clearDataModal" title="Clear All Data">🗑️</button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="logout()" title="Logout">🚪</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Year Filter Bar -->
+  <div class="container-fluid mt-3">
+    <div class="d-flex gap-2 align-items-center" id="yearFilter">
+      <span class="text-muted small me-2">View:</span>
+      <button class="btn btn-sm year-btn active" onclick="setYearFilter('all')">All Years</button>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="container-fluid mt-2">
+    <div class="row g-2">
+      <div class="col-lg-2 col-md-3 col-6">
+        <div class="card stat-card">
+          <div class="card-body">
+            <div class="stat-label">Total P/L</div>
+            <div id="totalPL" class="stat-value">$0.00</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-2 col-md-3 col-6">
+        <div class="card stat-card">
+          <div class="card-body">
+            <div class="stat-label">Stocks P/L</div>
+            <div id="stockPL" class="stat-value">$0.00</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-2 col-md-3 col-6">
+        <div class="card stat-card">
+          <div class="card-body">
+            <div class="stat-label">Options P/L</div>
+            <div id="optionsPL" class="stat-value">$0.00</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-2 col-md-3 col-6">
+        <div class="card stat-card">
+          <div class="card-body">
+            <div class="stat-label">Trade Win Rate</div>
+            <div id="winRate" class="stat-value">0%</div>
+            <div class="stat-sub text-muted" id="winRateSub"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-2 col-md-3 col-6">
+        <div class="card stat-card">
+          <div class="card-body">
+            <div class="stat-label">This Month</div>
+            <div id="monthPL" class="stat-value">$0.00</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-2 col-md-3 col-6">
+        <div class="card stat-card">
+          <div class="card-body">
+            <div class="stat-label">This Week</div>
+            <div id="weekPL" class="stat-value">$0.00</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar + Chart -->
+  <div class="container-fluid mt-3 mb-4">
+    <div class="row g-3">
+      <div class="col-lg-7">
+        <div class="card h-100">
+          <div class="card-body">
+            <div id="calendar"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column">
+            <h6 class="text-muted mb-3">Cumulative P/L</h6>
+            <div class="flex-grow-1" style="min-height: 300px; position: relative;">
+              <canvas id="plChart"></canvas>
+            </div>
+            <!-- Mini stats -->
+            <div class="row g-2 mt-3 pt-3 border-top border-secondary">
+              <div class="col-3 text-center">
+                <div class="stat-label">Best Day</div>
+                <div id="bestDay" class="stat-value-sm">$0.00</div>
+              </div>
+              <div class="col-3 text-center">
+                <div class="stat-label">Worst Day</div>
+                <div id="worstDay" class="stat-value-sm">$0.00</div>
+              </div>
+              <div class="col-3 text-center">
+                <div class="stat-label">Avg / Day</div>
+                <div id="avgDay" class="stat-value-sm">$0.00</div>
+              </div>
+              <div class="col-3 text-center">
+                <div class="stat-label">Day Win %</div>
+                <div id="dayWinRate" class="stat-value-sm">0%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 2: Monthly + Daily P/L -->
+  <div class="container-fluid mb-3">
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <h6 class="text-muted mb-3">Monthly P/L</h6>
+            <div style="min-height: 250px; position: relative;">
+              <canvas id="monthlyChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <h6 class="text-muted mb-3">Daily P/L</h6>
+            <div style="min-height: 250px; position: relative;">
+              <canvas id="dailyChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 3: Stock vs Options + Top Tickers + Rolling Win Rate -->
+  <div class="container-fluid mb-4">
+    <div class="row g-3">
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <h6 class="text-muted mb-3">Stocks vs Options P/L</h6>
+            <div style="min-height: 250px; position: relative;">
+              <canvas id="stockOptChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="text-muted mb-0">P/L by Ticker</h6>
+              <button class="btn btn-outline-secondary btn-sm py-0 px-2" id="tickerExpandBtn" onclick="toggleTickerExpand()" style="display:none; font-size:0.7rem;">Show All</button>
+            </div>
+            <div style="min-height: 250px; position: relative;">
+              <canvas id="tickerChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <h6 class="text-muted mb-3">Rolling Win Rate (10-day)</h6>
+            <div style="min-height: 250px; position: relative;">
+              <canvas id="winRateChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Entry Modal -->
+  <div class="modal fade" id="entryModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-0">
+          <h5 class="modal-title" id="entryModalLabel">Add Entry</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-control" id="entryDate">
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label">Stock P/L ($)</label>
+              <input type="number" step="0.01" class="form-control" id="stockPLInput" placeholder="0.00">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Options P/L ($)</label>
+              <input type="number" step="0.01" class="form-control" id="optionsPLInput" placeholder="0.00">
+            </div>
+          </div>
+          <div class="mb-3 p-3 rounded" style="background: var(--bg-primary);">
+            <div class="d-flex justify-content-between">
+              <span class="text-muted">Total P/L</span>
+              <strong id="entryTotalPL">$0.00</strong>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea class="form-control" id="notesInput" rows="2" placeholder="What happened today..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-danger" id="deleteBtn" onclick="deleteEntry()" style="display:none;">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" onclick="saveEntry()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Modal -->
+  <div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header border-0">
+          <h5 class="modal-title">Import from CSV</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="import-info mb-3">
+            <h6>📋 Supported Formats</h6>
+            <ul class="mb-0 small">
+              <li><strong>Robinhood</strong> — Account → Statements & History → Export CSV</li>
+              <li><strong>Fidelity Realized Gain/Loss</strong> — Accounts → Tax Forms → Realized Gain/Loss → Download CSV</li>
+              <li><strong>Fidelity Activity & Orders</strong> — Activity & Orders → History → Download</li>
+              <li><strong>Simple CSV</strong> — Columns: <code>Date, Stock P/L, Options P/L, Notes</code></li>
+            </ul>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Select CSV File</label>
+            <input type="file" class="form-control" id="csvFile" accept=".csv">
+          </div>
+          <!-- Preview area -->
+          <div id="previewArea" style="display:none;">
+            <h6 class="text-muted">Preview — <span id="previewCount">0</span> daily entries, <span id="previewTradeCount">0</span> individual trades</h6>
+            <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+              <table class="table table-sm table-dark">
+                <thead>
+                  <tr><th>Date</th><th>Stock P/L</th><th>Options P/L</th><th>Total</th><th>Notes</th></tr>
+                </thead>
+                <tbody id="previewBody"></tbody>
+              </table>
+            </div>
+            <div id="tradePreviewArea" style="display:none;" class="mt-3">
+              <h6 class="text-muted">Individual Trades</h6>
+              <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                <table class="table table-sm table-dark">
+                  <thead>
+                    <tr><th>Date</th><th>Symbol</th><th>Type</th><th>P/L</th></tr>
+                  </thead>
+                  <tbody id="tradePreviewBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div id="importError" class="alert alert-danger mt-3" style="display:none;"></div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-info btn-sm" onclick="previewCSV()" id="previewBtn">Preview</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" onclick="importCSV()" id="importBtn">Import</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trades Section -->
+  <div class="container-fluid mt-3 mb-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="mb-0">
+            <span>Individual Trades</span>
+            <span class="badge bg-secondary ms-2" id="tradeCount">0</span>
+          </h6>
+          <div class="d-flex gap-2 align-items-center">
+            <input type="date" class="form-control form-control-sm" id="tradesFilterDate" style="width:auto;" title="Filter by date">
+            <button class="btn btn-outline-secondary btn-sm" onclick="clearTradeFilter()" title="Show all trades">All</button>
+            <button class="btn btn-outline-info btn-sm" id="loadAllBtn" onclick="loadAllTrades()" style="display:none;">Load All</button>
+            <button class="btn btn-success btn-sm" onclick="openNewTrade()">+ Add Trade</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm table-dark table-hover mb-0" id="tradesTable" style="display:none;">
+            <thead>
+              <tr>
+                <th id="thDate" class="sortable" onclick="toggleSort('date')">Date ▼</th>
+                <th id="thSymbol" class="sortable" onclick="toggleSort('symbol')">Symbol</th>
+                <th id="thType" class="sortable" onclick="toggleSort('type')">Type</th>
+                <th id="thPL" class="sortable" onclick="toggleSort('pl')">P/L</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tradesBody"></tbody>
+          </table>
+          <div id="noTrades" class="text-center text-muted py-3">No trades recorded yet. Click "+ Add Trade" to log your first trade.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Clear Data Modal -->
+  <div class="modal fade" id="clearDataModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header border-0">
+          <h5 class="modal-title">⚠️ Clear All Data</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">This will permanently delete <strong>all your entries and trades</strong>. This cannot be undone.</p>
+          <label class="form-label">Type <strong>DELETE</strong> to confirm</label>
+          <input type="text" class="form-control" id="clearConfirmInput" placeholder="Type DELETE here">
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" onclick="clearAllData()">Clear Everything</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trade Modal -->
+  <div class="modal fade" id="tradeModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-0">
+          <h5 class="modal-title" id="tradeModalLabel">Add Trade</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="tradeId">
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label">Date</label>
+              <input type="date" class="form-control" id="tradeDate">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Symbol</label>
+              <input type="text" class="form-control" id="tradeSymbol" placeholder="AAPL" style="text-transform:uppercase;">
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label">Type</label>
+              <select class="form-select" id="tradeType">
+                <option value="stock">Stock</option>
+                <option value="option">Option</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">P/L ($)</label>
+              <input type="number" step="0.01" class="form-control" id="tradePLInput" placeholder="0.00">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea class="form-control" id="tradeNotes" rows="2" placeholder="Trade rationale..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-danger" id="tradeDeleteBtn" onclick="deleteTrade()" style="display:none;">Delete</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" onclick="saveTrade()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
