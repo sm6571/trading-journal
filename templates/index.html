@@ -196,6 +196,122 @@
     </div>
   </div>
 
+  <!-- ── Personal Analytics ── -->
+  <div class="container-fluid mb-2">
+    <h5 class="analytics-header">📈 Personal Analytics</h5>
+  </div>
+
+  <!-- Analytics Insight Cards -->
+  <div class="container-fluid mb-3">
+    <div class="row g-2">
+      <div class="col-lg-2 col-md-4 col-6">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Current Streak</div>
+          <div id="anCurrentStreak" class="stat-value text-neutral">—</div>
+          <div class="stat-sub text-muted">daily</div>
+        </div></div>
+      </div>
+      <div class="col-lg-2 col-md-4 col-6">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Best Win Streak</div>
+          <div id="anLongestWin" class="stat-value text-profit">—</div>
+        </div></div>
+      </div>
+      <div class="col-lg-2 col-md-4 col-6">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Worst Loss Streak</div>
+          <div id="anLongestLoss" class="stat-value text-loss">—</div>
+        </div></div>
+      </div>
+      <div class="col-lg-2 col-md-4 col-6">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Profit Factor</div>
+          <div id="anProfitFactor" class="stat-value text-neutral">—</div>
+          <div class="stat-sub text-muted">win$ / loss$</div>
+        </div></div>
+      </div>
+      <div class="col-lg-2 col-md-4 col-6">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Max Drawdown</div>
+          <div id="anMaxDrawdown" class="stat-value text-neutral">—</div>
+        </div></div>
+      </div>
+      <div class="col-lg-2 col-md-4 col-6">
+        <div class="card stat-card"><div class="card-body">
+          <div class="stat-label">Expectancy</div>
+          <div id="anExpectancy" class="stat-value text-neutral">—</div>
+          <div class="stat-sub text-muted">per day</div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Avg Win/Loss + Charts -->
+  <div class="container-fluid mb-3">
+    <div class="row g-3">
+      <div class="col-lg-2 col-md-3">
+        <div class="card h-100"><div class="card-body d-flex flex-column justify-content-center">
+          <div class="mb-3">
+            <div class="stat-label">Avg Win</div>
+            <div id="anAvgWin" class="stat-value text-neutral">—</div>
+          </div>
+          <div>
+            <div class="stat-label">Avg Loss</div>
+            <div id="anAvgLoss" class="stat-value text-neutral">—</div>
+          </div>
+        </div></div>
+      </div>
+      <div class="col-lg-5 col-md-4">
+        <div class="card h-100"><div class="card-body">
+          <h6 class="text-muted mb-3">Avg P/L by Day of Week</h6>
+          <div style="min-height: 250px; position: relative;">
+            <canvas id="dowChart"></canvas>
+          </div>
+        </div></div>
+      </div>
+      <div class="col-lg-5 col-md-5">
+        <div class="card h-100"><div class="card-body">
+          <h6 class="text-muted mb-3">Daily P/L Distribution</h6>
+          <div style="min-height: 250px; position: relative;">
+            <canvas id="distChart"></canvas>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly Performance + Top Symbols Tables -->
+  <div class="container-fluid mb-4">
+    <div class="row g-3">
+      <div class="col-lg-7">
+        <div class="card h-100"><div class="card-body">
+          <h6 class="text-muted mb-3">Monthly Performance</h6>
+          <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+            <table class="table table-sm table-dark table-hover mb-0">
+              <thead><tr>
+                <th>Month</th><th>Days</th><th>P/L</th><th>Win %</th><th>Best Day</th><th>Worst Day</th>
+              </tr></thead>
+              <tbody id="monthlyTableBody"></tbody>
+            </table>
+          </div>
+        </div></div>
+      </div>
+      <div class="col-lg-5">
+        <div class="card h-100"><div class="card-body">
+          <h6 class="text-muted mb-3">Top Symbols by P/L</h6>
+          <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+            <table class="table table-sm table-dark table-hover mb-0">
+              <thead><tr>
+                <th>Symbol</th><th>Trades</th><th>P/L</th><th>Win %</th>
+              </tr></thead>
+              <tbody id="topSymbolsBody"></tbody>
+            </table>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Entry Modal -->
   <div class="modal fade" id="entryModal" tabindex="-1">
     <div class="modal-dialog">

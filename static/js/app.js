@@ -1,6 +1,6 @@
 /* ── State ── */
 let calendar;
-let chart, monthlyChart, dailyChart, stockOptChart, tickerChart, winRateChart;
+let chart, monthlyChart, dailyChart, stockOptChart, tickerChart, winRateChart, dowChart, distChart;
 let allEntries = [];
 let allTrades = [];
 let tradeSort = { col: 'date', dir: 'desc' };
@@ -120,6 +120,24 @@ function initCharts() {
       scales: { x: { ...defaultScales.x, ticks: { ...defaultScales.x.ticks, maxRotation: 45 } },
         y: { ...defaultScales.y, min: 0, max: 100, ticks: { ...defaultScales.y.ticks, callback: v => v + '%' } } } }
   });
+
+  // 7. Day of Week bar chart
+  dowChart = new Chart(document.getElementById('dowChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], datasets: [{ label: 'Avg P/L', data: [], backgroundColor: [], borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => formatMoney(ctx.parsed.y) } } },
+      scales: defaultScales }
+  });
+
+  // 8. P/L Distribution histogram
+  distChart = new Chart(document.getElementById('distChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: 'Days', data: [], backgroundColor: [], borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.parsed.y + ' day' + (ctx.parsed.y !== 1 ? 's' : '') } } },
+      scales: { x: defaultScales.x, y: { ...defaultScales.y, ticks: { ...defaultScales.y.ticks, callback: v => v, stepSize: 1 } } } }
+  });
 }
 
 /* ── Data Loading ── */
@@ -210,6 +228,7 @@ async function applyYearFilter() {
     updateStockOptChart(stats);
     updateTickerChart(trades);
     updateWinRateChart(entries);
+    updateAnalytics(entries, trades);
   });
 }
 
@@ -455,6 +474,210 @@ function updateWinRateChart(entries) {
   winRateChart.data.datasets[0].data = data;
   winRateChart.data.datasets[1].data = labels.map(() => 50);
   winRateChart.update();
+}
+
+/* ── Personal Analytics ── */
+function updateAnalytics(entries, trades) {
+  updateStreaks(entries);
+  updateProfitFactor(entries);
+  updateDrawdown(entries);
+  updateExpectancy(entries);
+  updateDOWChart(entries);
+  updateDistChart(entries);
+  updateMonthlyTable(entries);
+  updateTopSymbols(trades);
+}
+
+function updateStreaks(entries) {
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+  let longestWin = 0, longestLoss = 0, tempWin = 0, tempLoss = 0;
+
+  for (const e of sorted) {
+    const pl = e.stock_pl + e.options_pl;
+    if (pl > 0) { tempWin++; tempLoss = 0; if (tempWin > longestWin) longestWin = tempWin; }
+    else if (pl < 0) { tempLoss++; tempWin = 0; if (tempLoss > longestLoss) longestLoss = tempLoss; }
+    else { tempWin = 0; tempLoss = 0; }
+  }
+
+  let currentStreak = 0, currentType = '';
+  if (sorted.length > 0) {
+    let i = sorted.length - 1;
+    const lastPl = sorted[i].stock_pl + sorted[i].options_pl;
+    if (lastPl > 0) {
+      currentType = 'W'; currentStreak = 1; i--;
+      while (i >= 0 && (sorted[i].stock_pl + sorted[i].options_pl) > 0) { currentStreak++; i--; }
+    } else if (lastPl < 0) {
+      currentType = 'L'; currentStreak = 1; i--;
+      while (i >= 0 && (sorted[i].stock_pl + sorted[i].options_pl) < 0) { currentStreak++; i--; }
+    }
+  }
+
+  const csEl = document.getElementById('anCurrentStreak');
+  csEl.textContent = currentStreak > 0 ? `${currentStreak}${currentType}` : '—';
+  csEl.className = 'stat-value ' + (currentType === 'W' ? 'text-profit' : currentType === 'L' ? 'text-loss' : 'text-neutral');
+  document.getElementById('anLongestWin').textContent = longestWin > 0 ? `${longestWin} days` : '—';
+  document.getElementById('anLongestLoss').textContent = longestLoss > 0 ? `${longestLoss} days` : '—';
+}
+
+function updateProfitFactor(entries) {
+  let grossWin = 0, grossLoss = 0;
+  entries.forEach(e => {
+    const pl = e.stock_pl + e.options_pl;
+    if (pl > 0) grossWin += pl; else if (pl < 0) grossLoss += Math.abs(pl);
+  });
+  const el = document.getElementById('anProfitFactor');
+  if (entries.length < 10 || grossLoss === 0) {
+    el.textContent = grossWin > 0 && grossLoss === 0 ? '∞' : '—';
+    el.className = 'stat-value text-neutral';
+  } else {
+    const pf = round2(grossWin / grossLoss);
+    el.textContent = pf.toFixed(2);
+    el.className = 'stat-value ' + (pf >= 1 ? 'text-profit' : 'text-loss');
+  }
+}
+
+function updateDrawdown(entries) {
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+  let peak = 0, cum = 0, maxDD = 0;
+  sorted.forEach(e => {
+    cum += e.stock_pl + e.options_pl;
+    if (cum > peak) peak = cum;
+    const dd = peak - cum;
+    if (dd > maxDD) maxDD = dd;
+  });
+  const el = document.getElementById('anMaxDrawdown');
+  el.textContent = maxDD > 0 ? formatMoney(-maxDD) : '—';
+  el.className = 'stat-value ' + (maxDD > 0 ? 'text-loss' : 'text-neutral');
+}
+
+function updateExpectancy(entries) {
+  let wins = 0, losses = 0, totalWin = 0, totalLoss = 0;
+  entries.forEach(e => {
+    const pl = e.stock_pl + e.options_pl;
+    if (pl > 0) { wins++; totalWin += pl; }
+    else if (pl < 0) { losses++; totalLoss += pl; }
+  });
+  const total = wins + losses;
+  const el = document.getElementById('anExpectancy');
+  if (total < 5) {
+    el.textContent = '—'; el.className = 'stat-value text-neutral';
+  } else {
+    const exp = round2((wins / total) * (totalWin / (wins || 1)) + (losses / total) * (totalLoss / (losses || 1)));
+    el.textContent = formatMoney(exp);
+    el.className = 'stat-value ' + (exp >= 0 ? 'text-profit' : 'text-loss');
+  }
+  document.getElementById('anAvgWin').textContent = wins > 0 ? formatMoney(round2(totalWin / wins)) : '—';
+  document.getElementById('anAvgWin').className = 'stat-value ' + (wins > 0 ? 'text-profit' : 'text-neutral');
+  document.getElementById('anAvgLoss').textContent = losses > 0 ? formatMoney(round2(totalLoss / losses)) : '—';
+  document.getElementById('anAvgLoss').className = 'stat-value ' + (losses > 0 ? 'text-loss' : 'text-neutral');
+}
+
+function updateDOWChart(entries) {
+  const dayData = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+  entries.forEach(e => {
+    const d = new Date(e.date + 'T12:00:00');
+    const dow = d.getDay();
+    if (dow >= 1 && dow <= 5) dayData[dow].push(e.stock_pl + e.options_pl);
+  });
+  const data = [1,2,3,4,5].map(d => {
+    const vals = dayData[d];
+    return vals.length > 0 ? round2(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+  });
+  dowChart.data.datasets[0].data = data;
+  dowChart.data.datasets[0].backgroundColor = data.map(v => v >= 0 ? chartColors.green : chartColors.red);
+  dowChart.update();
+}
+
+function updateDistChart(entries) {
+  if (entries.length === 0) {
+    distChart.data.labels = []; distChart.data.datasets[0].data = []; distChart.update(); return;
+  }
+  const pls = entries.map(e => e.stock_pl + e.options_pl);
+  const min = Math.min(...pls), max = Math.max(...pls);
+  const range = max - min;
+  let bs;
+  if (range === 0) bs = 100;
+  else if (range < 200) bs = 25;
+  else if (range < 500) bs = 50;
+  else if (range < 2000) bs = 100;
+  else if (range < 5000) bs = 250;
+  else bs = 500;
+
+  const bStart = Math.floor(min / bs) * bs;
+  const bEnd = Math.ceil(max / bs) * bs;
+  const buckets = [];
+  for (let b = bStart; b < bEnd; b += bs) buckets.push({ min: b, max: b + bs, count: 0 });
+  if (buckets.length === 0) buckets.push({ min: 0, max: bs, count: 0 });
+
+  pls.forEach(pl => {
+    const idx = Math.min(Math.floor((pl - bStart) / bs), buckets.length - 1);
+    if (idx >= 0) buckets[idx].count++;
+  });
+
+  distChart.data.labels = buckets.map(b => (b.min >= 0 ? '$' : '-$') + Math.abs(b.min));
+  distChart.data.datasets[0].data = buckets.map(b => b.count);
+  distChart.data.datasets[0].backgroundColor = buckets.map(b => (b.min + b.max) / 2 >= 0 ? chartColors.green : chartColors.red);
+  distChart.update();
+}
+
+function updateMonthlyTable(entries) {
+  const monthly = {};
+  entries.forEach(e => {
+    const month = e.date.substring(0, 7);
+    if (!monthly[month]) monthly[month] = { days: 0, pl: 0, wins: 0, best: -Infinity, worst: Infinity };
+    const dayPl = e.stock_pl + e.options_pl;
+    monthly[month].days++;
+    monthly[month].pl += dayPl;
+    if (dayPl > 0) monthly[month].wins++;
+    if (dayPl > monthly[month].best) monthly[month].best = dayPl;
+    if (dayPl < monthly[month].worst) monthly[month].worst = dayPl;
+  });
+
+  const months = Object.keys(monthly).sort().reverse();
+  const tbody = document.getElementById('monthlyTableBody');
+  tbody.innerHTML = '';
+  if (months.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No data</td></tr>'; return; }
+
+  months.forEach(m => {
+    const d = monthly[m];
+    const wr = d.days > 0 ? round2(d.wins / d.days * 100) : 0;
+    const [y, mo] = m.split('-');
+    const label = new Date(y, mo - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
+    tbody.innerHTML += `<tr>
+      <td>${label}</td><td>${d.days}</td>
+      <td class="${d.pl > 0 ? 'text-profit' : d.pl < 0 ? 'text-loss' : ''}"><strong>${formatMoney(round2(d.pl))}</strong></td>
+      <td class="${wr >= 50 ? 'text-profit' : wr > 0 ? 'text-loss' : ''}">${wr}%</td>
+      <td class="text-profit">${d.best > -Infinity ? formatMoney(round2(d.best)) : '—'}</td>
+      <td class="text-loss">${d.worst < Infinity ? formatMoney(round2(d.worst)) : '—'}</td>
+    </tr>`;
+  });
+}
+
+function updateTopSymbols(trades) {
+  const tbody = document.getElementById('topSymbolsBody');
+  if (trades.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No trades</td></tr>'; return; }
+
+  const bySymbol = {};
+  trades.forEach(t => {
+    if (!bySymbol[t.symbol]) bySymbol[t.symbol] = { count: 0, pl: 0, wins: 0 };
+    bySymbol[t.symbol].count++;
+    bySymbol[t.symbol].pl += t.pl;
+    if (t.pl > 0) bySymbol[t.symbol].wins++;
+  });
+
+  const sorted = Object.entries(bySymbol)
+    .map(([sym, d]) => ({ sym, ...d, wr: round2(d.wins / d.count * 100) }))
+    .sort((a, b) => b.pl - a.pl)
+    .slice(0, 10);
+
+  tbody.innerHTML = '';
+  sorted.forEach(s => {
+    tbody.innerHTML += `<tr>
+      <td><strong>${s.sym}</strong></td><td>${s.count}</td>
+      <td class="${s.pl > 0 ? 'text-profit' : s.pl < 0 ? 'text-loss' : ''}"><strong>${formatMoney(round2(s.pl))}</strong></td>
+      <td class="${s.wr >= 50 ? 'text-profit' : 'text-loss'}">${s.wr}%</td>
+    </tr>`;
+  });
 }
 
 /* ── Entry Modal ── */
