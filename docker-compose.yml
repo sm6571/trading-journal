@@ -1,0 +1,16 @@
+services:
+  trading-journal:
+    build: .
+    container_name: trading-journal
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - tj-data:/app/data
+    environment:
+      - NODE_ENV=production
+      - SESSION_SECRET=change-me-to-a-random-string
+      - DB_PATH=/app/data/trading_journal.db
+
+volumes:
+  tj-data:

@@ -84,6 +84,22 @@ app.post('/auth/login', authLimiter, (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.post('/auth/change-password', requireAuth, authLimiter, (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password required' });
+  if (newPassword.length < 4) return res.status(400).json({ error: 'New password must be at least 4 characters' });
+
+  const db = getDb();
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.userId);
+  if (!user || !bcrypt.compareSync(currentPassword, user.password)) {
+    return res.status(401).json({ error: 'Current password is incorrect' });
+  }
+
+  const hash = bcrypt.hashSync(newPassword, 10);
+  db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, req.session.userId);
+  res.json({ status: 'ok' });
+});
+
 app.post('/auth/logout', (req, res) => {
   req.session.destroy();
   res.json({ status: 'ok' });

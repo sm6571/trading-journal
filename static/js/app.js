@@ -705,6 +705,33 @@ async function logout() {
   window.location.href = '/login';
 }
 
+async function changePassword() {
+  const cur = document.getElementById('cpCurrent').value;
+  const np = document.getElementById('cpNew').value;
+  const confirm = document.getElementById('cpConfirm').value;
+  const alertEl = document.getElementById('cpAlert');
+  const successEl = document.getElementById('cpSuccess');
+  alertEl.style.display = 'none';
+  successEl.style.display = 'none';
+
+  if (np !== confirm) { alertEl.textContent = 'New passwords do not match'; alertEl.style.display = 'block'; return; }
+  if (np.length < 4) { alertEl.textContent = 'Password must be at least 4 characters'; alertEl.style.display = 'block'; return; }
+
+  try {
+    const res = await fetch('/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currentPassword: cur, newPassword: np })
+    });
+    const data = await res.json();
+    if (!res.ok) { alertEl.textContent = data.error; alertEl.style.display = 'block'; return; }
+    successEl.style.display = 'block';
+    document.getElementById('cpCurrent').value = '';
+    document.getElementById('cpNew').value = '';
+    document.getElementById('cpConfirm').value = '';
+  } catch { alertEl.textContent = 'Connection error'; alertEl.style.display = 'block'; }
+}
+
 async function clearAllData() {
   const input = document.getElementById('clearConfirmInput');
   if (input.value.trim() !== 'DELETE') {

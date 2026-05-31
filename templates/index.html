@@ -20,6 +20,7 @@
         <button class="btn btn-success btn-sm" onclick="openNewEntry()">+ Add Entry</button>
         <button class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">📁 Import CSV</button>
         <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#clearDataModal" title="Clear All Data">🗑️</button>
+        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#changePasswordModal" title="Change Password">🔑</button>
         <button class="btn btn-outline-secondary btn-sm" onclick="logout()" title="Logout">🚪</button>
       </div>
     </div>
@@ -392,6 +393,35 @@
           <button type="button" class="btn btn-outline-danger" id="tradeDeleteBtn" onclick="deleteTrade()" style="display:none;">Delete</button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="button" class="btn btn-success" onclick="saveTrade()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div class="modal fade" id="changePasswordModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Change Password</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div id="cpAlert" class="alert alert-danger" style="display:none;"></div>
+          <div id="cpSuccess" class="alert alert-success" style="display:none;">Password changed!</div>
+          <div class="mb-3">
+            <label class="form-label">Current Password</label>
+            <input type="password" class="form-control" id="cpCurrent" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">New Password</label>
+            <input type="password" class="form-control" id="cpNew" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Confirm New Password</label>
+            <input type="password" class="form-control" id="cpConfirm" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" onclick="changePassword()">Update Password</button>
         </div>
       </div>
     </div>
